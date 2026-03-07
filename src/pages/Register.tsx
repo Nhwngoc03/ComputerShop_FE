@@ -1,1 +1,0 @@
-// FILE NÀY ĐÃ ĐƯỢC CHUYỂN VÀO pages/auth/Register.tsx. BẠN CÓ THỂ XÓA FILE NÀY.

@@ -1,11 +1,28 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-// Fix: Import from constants/index.ts instead of constants.tsx
-import { PRODUCTS } from '../../constants/index';
 import ProductCard from '../../components/ui/ProductCard';
+import { productService } from '../../api/services/productService';
+import { ProductResponse } from '../../api/types/product';
 
 const Home: React.FC = () => {
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await productService.getAllProducts();
+        setProducts(data.slice(0, 8)); // Show first 8 products
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
   return (
     <div className="space-y-16 pb-20">
       {/* Hero Section */}
@@ -57,11 +74,17 @@ const Home: React.FC = () => {
           <h2 className="text-3xl font-light uppercase tracking-wide">Sản phẩm <span className="font-bold">Bán chạy</span></h2>
           <Link to="/shop" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black underline underline-offset-4">Đến Cửa Hàng</Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {PRODUCTS.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {products.map(product => (
+              <ProductCard key={product.productId} product={product} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Banner */}

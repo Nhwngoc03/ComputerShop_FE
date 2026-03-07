@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { PRODUCTS } from '../constants/index';
-import { Product } from '../types/index';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { productService } from '../api/services/productService';
+import { cartService } from '../api/services/cartService';
+import { ProductResponse } from '../api/types/product';
 
 const BUILD_CATEGORIES = [
   { id: 'cpu', name: 'CPU - Vi xử lý', filter: 'CPU' },
@@ -15,8 +16,11 @@ const BUILD_CATEGORIES = [
 ];
 
 const BuildPC: React.FC = () => {
-  const { addToCart } = useCart();
-  const [selectedParts, setSelectedParts] = useState<Record<string, Product | null>>({
+  const { refreshCart } = useCart();
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [selectedParts, setSelectedParts] = useState<Record<string, ProductResponse | null>>({
     cpu: null,
     mainboard: null,
     ram: null,
@@ -28,8 +32,27 @@ const BuildPC: React.FC = () => {
 
   const [selectingCategory, setSelectingCategory] = useState<string | null>(null);
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await productService.getAllProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const totalPrice = useMemo(() => {
-    return (Object.values(selectedParts) as (Product | null)[]).reduce((sum: number, part) => sum + (part?.price || 0), 0);
+    return (Object.values(selectedParts) as (ProductResponse | null)[]).reduce(
+      (sum: number, part) => sum + (part?.discountedPrice || part?.basePrice || 0), 
+      0
+    );
   }, [selectedParts]);
 
   const availableProducts = useMemo(() => {
@@ -37,13 +60,13 @@ const BuildPC: React.FC = () => {
     const category = BUILD_CATEGORIES.find(c => c.id === selectingCategory);
     if (!category) return [];
     
-    return PRODUCTS.filter(p => 
-      p.category === category.filter || 
+    return products.filter(p => 
+      p.categoryName?.toLowerCase().includes(category.filter.toLowerCase()) ||
       p.name.toLowerCase().includes(category.filter.toLowerCase())
     );
-  }, [selectingCategory]);
+  }, [selectingCategory, products]);
 
-  const handleSelectPart = (product: Product) => {
+  const handleSelectPart = (product: ProductResponse) => {
     if (selectingCategory) {
       setSelectedParts(prev => ({ ...prev, [selectingCategory]: product }));
       setSelectingCategory(null);
@@ -54,16 +77,70 @@ const BuildPC: React.FC = () => {
     setSelectedParts(prev => ({ ...prev, [categoryId]: null }));
   };
 
-  const handleAddToCartAll = () => {
-    const parts = Object.values(selectedParts).filter(p => p !== null) as Product[];
+  const handleAddToCartAll = async () => {
+    const parts = Object.values(selectedParts).filter(p => p !== null) as ProductResponse[];
     if (parts.length === 0) {
       alert('Vui lòng chọn ít nhất một linh kiện.');
       return;
     }
     
-    // Add each part to cart. The addToCart function in CartContext 
-    // will handle the authentication check and redirect if needed.
-    parts.forEach(part => addToCart(part));
+    setAddingToCart(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    // Add each part by calling API directly
+    for (const part of parts) {
+      if (part.variants && part.variants.length > 0) {
+        try {
+          await cartService.addToCart({
+            variantId: part.variants[0].variantId,
+            quantity: 1,
+          });
+          successCount++;
+          console.log(`Added ${part.name} to cart`);
+        } catch (error) {
+          console.error(`Failed to add ${part.name}:`, error);
+          failCount++;
+        }
+      } else {
+        console.warn(`Product ${part.name} has no variants`);
+        failCount++;
+      }
+    }
+    
+    // Refresh cart once after all items added
+    await refreshCart();
+    setAddingToCart(false);
+    
+    if (successCount > 0) {
+      alert(`Đã thêm ${successCount} sản phẩm vào giỏ hàng${failCount > 0 ? `. ${failCount} sản phẩm thất bại.` : '!'}`);
+    } else {
+      alert('Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+    }
+  };
+
+  const handleSaveConfig = () => {
+    const parts = Object.values(selectedParts).filter(p => p !== null) as ProductResponse[];
+    if (parts.length === 0) {
+      alert('Vui lòng chọn ít nhất một linh kiện để lưu cấu hình.');
+      return;
+    }
+
+    const configName = prompt('Nhập tên cấu hình:');
+    if (!configName) return;
+
+    const savedConfigs = JSON.parse(localStorage.getItem('pc_configs') || '[]');
+    const newConfig = {
+      id: Date.now(),
+      name: configName,
+      parts: selectedParts,
+      totalPrice,
+      createdAt: new Date().toISOString(),
+    };
+
+    savedConfigs.push(newConfig);
+    localStorage.setItem('pc_configs', JSON.stringify(savedConfigs));
+    alert('Đã lưu cấu hình thành công!');
   };
 
   return (
@@ -81,7 +158,7 @@ const BuildPC: React.FC = () => {
             <div className="bg-black text-white p-6 rounded-2xl shadow-xl min-w-[240px]">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60 mb-1">Tổng cộng dự tính</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black">${totalPrice.toLocaleString()}</span>
+                <span className="text-3xl font-black">${totalPrice.toFixed(2)}</span>
                 <span className="text-xs opacity-60 uppercase font-bold">USD</span>
               </div>
             </div>
@@ -89,7 +166,12 @@ const BuildPC: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 mt-12">
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <div className="max-w-5xl mx-auto px-4 mt-12">
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           {BUILD_CATEGORIES.map((category, index) => {
             const selectedPart = selectedParts[category.id];
@@ -121,14 +203,18 @@ const BuildPC: React.FC = () => {
                   {selectedPart ? (
                     <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300">
                       <img 
-                        src={selectedPart.image} 
+                        src={selectedPart.thumbnailUrl || '/placeholder.png'} 
                         alt={selectedPart.name} 
                         className="w-16 h-16 object-cover rounded-lg bg-gray-50"
-                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder.png';
+                        }}
                       />
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-bold text-black truncate">{selectedPart.name}</h4>
-                        <p className="text-xs text-gray-400 uppercase font-bold mt-1">${selectedPart.price.toLocaleString()}</p>
+                        <p className="text-xs text-gray-400 uppercase font-bold mt-1">
+                          ${(selectedPart.discountedPrice || selectedPart.basePrice).toFixed(2)}
+                        </p>
                       </div>
                       <button 
                         onClick={() => handleRemovePart(category.id)}
@@ -169,18 +255,23 @@ const BuildPC: React.FC = () => {
             Tiếp tục mua sắm
           </Link>
           <div className="flex gap-4 w-full md:w-auto">
-            <button className="flex-1 md:flex-none px-8 py-4 border border-black text-black text-[11px] font-bold uppercase tracking-widest hover:bg-gray-50 transition rounded-xl">
+            <button 
+              onClick={handleSaveConfig}
+              className="flex-1 md:flex-none px-8 py-4 border border-black text-black text-[11px] font-bold uppercase tracking-widest hover:bg-gray-50 transition rounded-xl"
+            >
               Lưu cấu hình
             </button>
             <button 
               onClick={handleAddToCartAll}
-              className="flex-1 md:flex-none px-10 py-4 bg-black text-white text-[11px] font-bold uppercase tracking-widest hover:bg-gray-800 transition rounded-xl shadow-2xl shadow-black/20"
+              disabled={addingToCart}
+              className="flex-1 md:flex-none px-10 py-4 bg-black text-white text-[11px] font-bold uppercase tracking-widest hover:bg-gray-800 transition rounded-xl shadow-2xl shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Thêm tất cả vào giỏ
+              {addingToCart ? 'Đang thêm...' : 'Thêm tất cả vào giỏ'}
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Selection Modal */}
       {selectingCategory && (
@@ -206,22 +297,26 @@ const BuildPC: React.FC = () => {
               {availableProducts.length > 0 ? (
                 availableProducts.map(product => (
                   <div 
-                    key={product.id}
+                    key={product.productId}
                     className="flex items-center gap-4 p-4 border border-gray-100 rounded-2xl hover:border-black hover:shadow-md transition cursor-pointer group"
                     onClick={() => handleSelectPart(product)}
                   >
                     <img 
-                      src={product.image} 
+                      src={product.thumbnailUrl || '/placeholder.png'} 
                       alt={product.name} 
                       className="w-16 h-16 object-cover rounded-xl bg-gray-50 group-hover:scale-105 transition duration-300"
-                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.png';
+                      }}
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-bold text-black truncate">{product.name}</h4>
-                      <p className="text-xs text-gray-400 mt-1">{product.brand}</p>
+                      <p className="text-xs text-gray-400 mt-1">{product.brandName}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-black text-black">${product.price.toLocaleString()}</p>
+                      <p className="text-sm font-black text-black">
+                        ${(product.discountedPrice || product.basePrice).toFixed(2)}
+                      </p>
                       <button className="mt-2 text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:underline">Chọn</button>
                     </div>
                   </div>

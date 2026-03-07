@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PRODUCTS } from '../../constants/index';
 import ProductCard from '../../components/ui/ProductCard';
+import { productService } from '../../api/services/productService';
+import { ProductResponse } from '../../api/types/product';
 
 const CATEGORIES = [
   { name: 'Tất cả', filter: null },
@@ -23,27 +24,53 @@ const Shop: React.FC = () => {
   const categoryFilter = queryParams.get('category');
   const searchFilter = queryParams.get('search');
 
+  const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await productService.getAllProducts();
+        console.log('Shop - Fetched products:', data);
+        console.log('Shop - First product thumbnailUrl:', data[0]?.thumbnailUrl);
+        setProducts(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load products');
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   const filteredProducts = useMemo(() => {
-    let result = PRODUCTS;
+    let result = products;
 
     if (categoryFilter) {
       result = result.filter(p => 
-        p.category.toLowerCase() === categoryFilter.toLowerCase() ||
-        p.name.toLowerCase().includes(categoryFilter.toLowerCase()) ||
-        p.category.toLowerCase().includes(categoryFilter.toLowerCase())
+        (p.categoryName?.toLowerCase() === categoryFilter.toLowerCase()) ||
+        (p.name?.toLowerCase().includes(categoryFilter.toLowerCase())) ||
+        (p.productName?.toLowerCase().includes(categoryFilter.toLowerCase())) ||
+        (p.categoryName?.toLowerCase().includes(categoryFilter.toLowerCase()))
       );
     }
 
     if (searchFilter) {
       result = result.filter(p => 
-        p.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        p.brand.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        p.category.toLowerCase().includes(searchFilter.toLowerCase())
+        (p.name?.toLowerCase().includes(searchFilter.toLowerCase())) ||
+        (p.productName?.toLowerCase().includes(searchFilter.toLowerCase())) ||
+        (p.brandName?.toLowerCase().includes(searchFilter.toLowerCase())) ||
+        (p.categoryName?.toLowerCase().includes(searchFilter.toLowerCase()))
       );
     }
 
     return result;
-  }, [categoryFilter, searchFilter]);
+  }, [products, categoryFilter, searchFilter]);
 
   const handleCategoryChange = (filter: string | null) => {
     if (filter) {
@@ -91,39 +118,55 @@ const Shop: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1">
-          <div className="mb-12">
-            <h1 className="text-4xl font-light uppercase tracking-tight text-black">
-              {categoryFilter ? (
-                <>Danh mục: <span className="font-bold">{categoryFilter}</span></>
-              ) : searchFilter ? (
-                <>Kết quả tìm kiếm cho: <span className="font-bold">"{searchFilter}"</span></>
-              ) : (
-                <>Tất cả <span className="font-bold">Sản phẩm</span></>
-              )}
-            </h1>
-            <p className="text-gray-400 mt-2 text-[10px] font-bold uppercase tracking-[0.2em]">
-              Hiển thị {filteredProducts.length} sản phẩm
-            </p>
-          </div>
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          )}
 
-          {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-              {filteredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+              <p className="text-sm font-medium">{error}</p>
             </div>
-          ) : (
-            <div className="py-32 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-              <span className="material-symbols-outlined text-6xl text-gray-200 mb-4">inventory_2</span>
-              <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Không tìm thấy sản phẩm nào</h2>
-              <p className="text-gray-400 mt-2">Vui lòng thử lại với bộ lọc khác</p>
-              <button 
-                onClick={() => navigate('/shop')}
-                className="mt-6 px-8 py-3 bg-black text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:bg-gray-800 transition"
-              >
-                Xem tất cả sản phẩm
-              </button>
-            </div>
+          )}
+
+          {!loading && !error && (
+            <>
+              <div className="mb-12">
+                <h1 className="text-4xl font-light uppercase tracking-tight text-black">
+                  {categoryFilter ? (
+                    <>Danh mục: <span className="font-bold">{categoryFilter}</span></>
+                  ) : searchFilter ? (
+                    <>Kết quả tìm kiếm cho: <span className="font-bold">"{searchFilter}"</span></>
+                  ) : (
+                    <>Tất cả <span className="font-bold">Sản phẩm</span></>
+                  )}
+                </h1>
+                <p className="text-gray-400 mt-2 text-[10px] font-bold uppercase tracking-[0.2em]">
+                  Hiển thị {filteredProducts.length} sản phẩm
+                </p>
+              </div>
+
+              {filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+                  {filteredProducts.map(product => (
+                    <ProductCard key={product.productId} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-32 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                  <span className="material-symbols-outlined text-6xl text-gray-200 mb-4">inventory_2</span>
+                  <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest">Không tìm thấy sản phẩm nào</h2>
+                  <p className="text-gray-400 mt-2">Vui lòng thử lại với bộ lọc khác</p>
+                  <button 
+                    onClick={() => navigate('/shop')}
+                    className="mt-6 px-8 py-3 bg-black text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:bg-gray-800 transition"
+                  >
+                    Xem tất cả sản phẩm
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

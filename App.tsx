@@ -9,10 +9,15 @@ import ProductDetail from './src/pages/Product/ProductDetail';
 import Dashboard from './src/pages/admin/Dashboard';
 import AdminProducts from './src/pages/admin/Products';
 import AdminOrders from './src/pages/admin/Orders';
+import AdminOrderDetail from './src/pages/admin/OrderDetail';
 import AdminUsers from './src/pages/admin/Users';
 import AdminBrands from './src/pages/admin/Brands';
 import AdminCategories from './src/pages/admin/Categories';
 import AdminPromotions from './src/pages/admin/Promotions';
+import AdminAttributes from './src/pages/admin/Attributes';
+import AdminRoles from './src/pages/admin/Roles';
+import AdminBlogs from './src/pages/admin/Blogs';
+import AdminInstallmentPackages from './src/pages/admin/InstallmentPackages';
 import Login from './src/pages/auth/Login';
 import Register from './src/pages/auth/Register';
 import BuildPC from './src/pages/BuildPC';
@@ -43,7 +48,12 @@ const App: React.FC = () => {
               <Route path="/admin/categories" element={<AdminCategories />} />
               <Route path="/admin/brands" element={<AdminBrands />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
               <Route path="/admin/promotions" element={<AdminPromotions />} />
+              <Route path="/admin/installment-packages" element={<AdminInstallmentPackages />} />
+              <Route path="/admin/attributes" element={<AdminAttributes />} />
+              <Route path="/admin/roles" element={<AdminRoles />} />
+              <Route path="/admin/blogs" element={<AdminBlogs />} />
               <Route path="/admin/users" element={<AdminUsers />} />
               
               {/* Auth routes */}

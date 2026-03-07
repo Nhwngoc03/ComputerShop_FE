@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Product } from '../../types/index';
+import { ProductResponse } from '../../api/types/product';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCompare } from '../../context/CompareContext';
 
 interface ProductCardProps {
-  product: Product;
+  product: Product | ProductResponse;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
@@ -15,6 +15,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { isAuthenticated } = useAuth();
   const { addToCompare, isInCompare, removeFromCompare } = useCompare();
   const navigate = useNavigate();
+
+  // Normalize product data to handle both old and new types
+  const isApiProduct = 'productId' in product;
+  const productId = isApiProduct ? (product as ProductResponse).productId : (product as Product).id;
+  const productName = isApiProduct 
+    ? ((product as ProductResponse).name || (product as ProductResponse).productName || '')
+    : (product as Product).name;
+  const productImage = isApiProduct 
+    ? ((product as ProductResponse).thumbnailUrl || (product as ProductResponse).imageUrls?.[0] || (product as ProductResponse).primaryImage || '/placeholder.png')
+    : (product as Product).image;
+  const productBrand = isApiProduct ? (product as ProductResponse).brandName || '' : (product as Product).brand;
+  const productPrice = isApiProduct ? (product as ProductResponse).basePrice : (product as Product).price;
+  const productTag = isApiProduct ? undefined : (product as Product).tag;
+  const productOriginalPrice = isApiProduct ? undefined : (product as Product).originalPrice;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -26,32 +40,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       return;
     }
     
-    addToCart(product);
+    addToCart(product as Product);
   };
 
   const handleCompare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isInCompare(product.id)) {
-      removeFromCompare(product.id);
+    if (isInCompare(productId)) {
+      removeFromCompare(productId);
     } else {
-      addToCompare(product);
+      addToCompare(product as Product);
     }
   };
 
-  const isCompared = isInCompare(product.id);
+  const isCompared = isInCompare(productId);
 
   return (
     <div className="group flex flex-col bg-white border border-transparent hover:border-gray-100 transition duration-300 relative">
       <div 
-        onClick={() => navigate(`/product/${product.id}`)}
+        onClick={() => navigate(`/product/${productId}`)}
         className="relative aspect-square bg-gray-50 overflow-hidden p-8 flex items-center justify-center cursor-pointer"
       >
-        {product.tag && (
+        {productTag && (
           <span className={`absolute top-4 left-4 z-10 text-[10px] font-bold px-2 py-1 uppercase tracking-widest shadow-sm ${
-            product.tag === 'Giảm giá' ? 'bg-red-600 text-white' : 'bg-black text-white'
+            productTag === 'Giảm giá' ? 'bg-red-600 text-white' : 'bg-black text-white'
           }`}>
-            {product.tag}
+            {productTag}
           </span>
         )}
         <button 
@@ -64,10 +78,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <span className="material-symbols-outlined text-sm">compare_arrows</span>
         </button>
         <img 
-          src={product.image} 
-          alt={product.name} 
+          src={productImage} 
+          alt={productName} 
           className="object-contain w-full h-full group-hover:scale-110 transition-transform duration-700 mix-blend-multiply"
           referrerPolicy="no-referrer"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = 'https://via.placeholder.com/400x400?text=No+Image';
+          }}
         />
         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center gap-2">
           <button 
@@ -79,7 +97,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/product/${product.id}`);
+              navigate(`/product/${productId}`);
             }}
             className="bg-black text-white px-4 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-gray-800 transition shadow-xl"
           >
@@ -88,14 +106,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
       <div className="p-4 text-center">
-        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-[0.2em] mb-1">{product.brand}</p>
-        <Link to={`/product/${product.id}`} className="block">
-          <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition truncate">{product.name}</h3>
+        <p className="text-[10px] text-gray-400 uppercase font-bold tracking-[0.2em] mb-1">{productBrand}</p>
+        <Link to={`/product/${productId}`} className="block">
+          <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition truncate">{productName}</h3>
         </Link>
         <div className="mt-2 flex justify-center items-center space-x-3">
-          <span className="text-sm font-bold">${product.price.toLocaleString()}</span>
-          {product.originalPrice && (
-            <span className="text-xs text-gray-400 line-through">${product.originalPrice.toLocaleString()}</span>
+          <span className="text-sm font-bold">{productPrice.toLocaleString('vi-VN')} đ</span>
+          {productOriginalPrice && (
+            <span className="text-xs text-gray-400 line-through">{productOriginalPrice.toLocaleString('vi-VN')} đ</span>
           )}
         </div>
       </div>

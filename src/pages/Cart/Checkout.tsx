@@ -1,17 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+import { userService } from '../../api/services/userService';
+import { orderService } from '../../api/services/orderService';
+import { paymentService } from '../../api/services/paymentService';
+import { UserResponse } from '../../api/types/user';
 
 const Checkout: React.FC = () => {
   const { cart, totalPrice, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
   const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bank' | 'installment'>('cod');
   const [installmentPlan, setInstallmentPlan] = useState<'3' | '6' | '12'>('6');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserResponse | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    phoneNumber: '',
+    address: '',
+  });
 
   const monthlyPayment = (totalPrice / parseInt(installmentPlan)).toFixed(2);
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (authUser) {
+        try {
+          const profile = await userService.getMyProfile();
+          setUserProfile(profile);
+          setFormData({
+            fullName: profile.username || '',
+            phoneNumber: profile.phoneNumber || '',
+            address: '',
+          });
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [authUser]);
 
   React.useEffect(() => {
     if (cart.length === 0) {
@@ -19,17 +50,77 @@ const Checkout: React.FC = () => {
     }
   }, [cart.length, navigate]);
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!authUser) {
+      alert('Vui lòng đăng nhập để đặt hàng');
+      navigate('/login');
+      return;
+    }
+
+    if (!formData.fullName.trim() || !formData.phoneNumber.trim() || !formData.address.trim()) {
+      alert('Vui lòng điền đầy đủ thông tin giao hàng');
+      return;
+    }
+
     setIsProcessing(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Map payment method to backend format
+      let paymentType = 'CASH';
+      if (paymentMethod === 'bank') {
+        paymentType = 'BANK_TRANSFER';
+      } else if (paymentMethod === 'installment') {
+        paymentType = 'INSTALLMENT';
+      }
+
+      // Create order - map to backend format
+      const orderData: any = {
+        recipientName: formData.fullName,
+        recipientPhone: formData.phoneNumber,
+        shippingAddress: formData.address,
+        paymentType: paymentMethod === 'installment' ? 'INSTALLMENT' : 'FULL',
+      };
+
+      // Only add packageId if payment method is installment
+      if (paymentMethod === 'installment') {
+        orderData.packageId = parseInt(installmentPlan);
+      }
+
+      console.log('Creating order with data:', orderData);
+      const order = await orderService.placeOrder(orderData);
+      console.log('Order created:', order);
+
+      // If payment method is bank transfer, redirect to VNPay
+      if (paymentMethod === 'bank') {
+        try {
+          const payment = await paymentService.createPayment(order.orderId);
+          console.log('Payment URL created:', payment);
+          
+          // Clear cart before redirecting
+          await clearCart();
+          
+          // Redirect to VNPay
+          paymentService.redirectToPayment(payment.paymentUrl);
+          return;
+        } catch (paymentError: any) {
+          console.error('Payment error:', paymentError);
+          alert('Đơn hàng đã được tạo nhưng không thể tạo link thanh toán. Vui lòng liên hệ hỗ trợ.');
+        }
+      }
+
+      // For COD and Installment, just show success and redirect
       setIsProcessing(false);
       alert('Đơn hàng đã được đặt thành công! Cảm ơn bạn đã mua sắm.');
-      clearCart();
-      navigate('/');
-    }, 2000);
+      await clearCart();
+      navigate('/orders');
+      
+    } catch (error: any) {
+      setIsProcessing(false);
+      console.error('Order error:', error);
+      alert(error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+    }
   };
 
   if (cart.length === 0) {
@@ -54,7 +145,8 @@ const Checkout: React.FC = () => {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Họ và tên</label>
                   <input 
                     type="text" 
-                    defaultValue={user?.name || ''}
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     required
                     className="w-full bg-gray-50 border-none p-4 text-sm rounded-xl focus:ring-1 focus:ring-black outline-none transition"
                     placeholder="Nguyễn Văn A"
@@ -64,6 +156,8 @@ const Checkout: React.FC = () => {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Số điện thoại</label>
                   <input 
                     type="tel" 
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                     required
                     className="w-full bg-gray-50 border-none p-4 text-sm rounded-xl focus:ring-1 focus:ring-black outline-none transition"
                     placeholder="0901 234 567"
@@ -73,6 +167,8 @@ const Checkout: React.FC = () => {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Địa chỉ nhận hàng</label>
                   <input 
                     type="text" 
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     required
                     className="w-full bg-gray-50 border-none p-4 text-sm rounded-xl focus:ring-1 focus:ring-black outline-none transition"
                     placeholder="Số nhà, tên đường, phường/xã..."

@@ -1,0 +1,167 @@
+import { apiClient } from '../client';
+import { API_ENDPOINTS } from '../config';
+import { ApiResponse } from '../types/common';
+import {
+  AuthenticationRequest,
+  AuthenticationResponse,
+  IntrospectRequest,
+  IntrospectResponse,
+  LogoutRequest,
+  RefreshRequest,
+  UserInfo,
+} from '../types/auth';
+
+export const authService = {
+  // Login
+  login: async (
+    email: string,
+    password: string
+  ): Promise<AuthenticationResponse> => {
+    const request: AuthenticationRequest = { email, password };
+    console.log('Login request:', request);
+    
+    const response = await apiClient.post<AuthenticationResponse>(
+      API_ENDPOINTS.AUTH_LOGIN,
+      request
+    );
+    
+    console.log('Login response:', response);
+    
+    if (!response.result) {
+      throw new Error('Login failed - no result in response');
+    }
+
+    // Store tokens in localStorage
+    if (response.result.token) {
+      localStorage.setItem('authToken', response.result.token);
+    }
+    if (response.result.refreshToken) {
+      localStorage.setItem('refreshToken', response.result.refreshToken);
+    }
+
+    return response.result;
+  },
+
+  // Logout
+  logout: async (): Promise<void> => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      try {
+        const request: LogoutRequest = { token };
+        await apiClient.post(API_ENDPOINTS.AUTH_LOGOUT, request);
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    // Clear tokens from localStorage
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+  },
+
+  // Introspect token (validate and get user info)
+  introspect: async (): Promise<IntrospectResponse> => {
+    const token = localStorage.getItem('authToken');
+    console.log('Introspect - token:', token ? 'exists' : 'missing');
+    
+    if (!token) {
+      throw new Error('No token found');
+    }
+
+    const request: IntrospectRequest = { token };
+    console.log('Introspect request:', request);
+    
+    const response = await apiClient.post<IntrospectResponse>(
+      API_ENDPOINTS.AUTH_INTROSPECT,
+      request
+    );
+
+    console.log('Introspect response:', response);
+
+    if (!response.result) {
+      throw new Error('Token introspection failed');
+    }
+
+    return response.result;
+  },
+
+  // Refresh token
+  refreshToken: async (): Promise<AuthenticationResponse> => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token found');
+    }
+
+    const request: RefreshRequest = { token: refreshToken };
+    const response = await apiClient.post<AuthenticationResponse>(
+      API_ENDPOINTS.AUTH_REFRESH,
+      request
+    );
+
+    if (!response.result) {
+      throw new Error('Token refresh failed');
+    }
+
+    // Update tokens in localStorage
+    if (response.result.token) {
+      localStorage.setItem('authToken', response.result.token);
+    }
+    if (response.result.refreshToken) {
+      localStorage.setItem('refreshToken', response.result.refreshToken);
+    }
+
+    return response.result;
+  },
+
+  // Get current user info from token
+  getCurrentUser: async (): Promise<UserInfo | null> => {
+    try {
+      console.log('getCurrentUser - calling introspect...');
+      const introspectResult = await authService.introspect();
+      console.log('getCurrentUser - introspect result:', introspectResult);
+      
+      if (introspectResult.valid) {
+        // Nếu introspect không trả về email/role, decode từ JWT token
+        if (!introspectResult.email) {
+          const token = localStorage.getItem('authToken');
+          if (token) {
+            try {
+              // Decode JWT token (phần payload là phần giữa của token)
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              console.log('getCurrentUser - decoded token payload:', payload);
+              
+              return {
+                email: payload.sub || payload.email || '',
+                role: payload.scope || payload.role || 'user',
+              };
+            } catch (decodeError) {
+              console.error('Failed to decode token:', decodeError);
+            }
+          }
+        } else {
+          // Nếu introspect có email/role thì dùng luôn
+          return {
+            email: introspectResult.email,
+            role: introspectResult.role || 'user',
+          };
+        }
+      }
+      
+      console.log('getCurrentUser - invalid or no email');
+      return null;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      return null;
+    }
+  },
+
+  // Check if user is authenticated
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem('authToken');
+  },
+
+  // Get stored token
+  getToken: (): string | null => {
+    return localStorage.getItem('authToken');
+  },
+};

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 interface AdminLayoutProps {
@@ -13,7 +13,23 @@ interface AdminLayoutProps {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle, actions, requiredRole }) => {
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, loading, logout } = useAuth();
+
+  const handleLogout = async () => {
+    if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+      await logout();
+      navigate('/login');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -28,9 +44,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle, ac
     { path: '/admin/products', label: 'Sản Phẩm', icon: 'inventory_2' },
     { path: '/admin/categories', label: 'Danh Mục', icon: 'category' },
     { path: '/admin/brands', label: 'Thương Hiệu', icon: 'branding_watermark' },
+    { path: '/admin/attributes', label: 'Thuộc Tính', icon: 'label' },
+    { path: '/admin/blogs', label: 'Blogs', icon: 'article' },
     { path: '/admin/orders', label: 'Đơn Hàng', icon: 'shopping_cart' },
     { path: '/admin/promotions', label: 'Khuyến Mãi', icon: 'sell' },
+    { path: '/admin/installment-packages', label: 'Gói Trả Góp', icon: 'credit_card' },
     { path: '/admin/users', label: 'Người Dùng', icon: 'group', adminOnly: true },
+    { path: '/admin/roles', label: 'Roles', icon: 'badge', adminOnly: true },
     { path: '#', label: 'Cấu Hình', icon: 'settings' },
   ];
 
@@ -65,10 +85,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle, ac
           })}
         </nav>
         <div className="p-4 border-t border-gray-100">
-          <Link to="/" className="flex items-center px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg transition">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg transition"
+          >
             <span className="material-symbols-outlined mr-3 text-xl">logout</span>
-            Thoát Quản Trị
-          </Link>
+            Đăng Xuất
+          </button>
         </div>
       </aside>
 

@@ -8,6 +8,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -16,22 +17,43 @@ const Login: React.FC = () => {
     document.documentElement.classList.toggle('dark');
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Giả lập tài khoản
-    if (email === 'admin@vitinh.com' && password === 'admin123') {
-      login(email, 'admin');
-      navigate('/admin');
-    } else if (email === 'staff@vitinh.com' && password === 'staff123') {
-      login(email, 'staff');
-      navigate('/admin');
-    } else if (email === 'user@vitinh.com' && password === 'user123') {
-      login(email, 'user');
-      navigate('/');
-    } else {
-      setError('Email hoặc mật khẩu không chính xác. Thử admin@vitinh.com, staff@vitinh.com hoặc user@vitinh.com');
+    try {
+      console.log('Attempting login...');
+      await login(email, password);
+      console.log('Login successful');
+      
+      // Đợi một chút để user state được set
+      setTimeout(() => {
+        // Navigate dựa trên role
+        const userStr = localStorage.getItem('authToken');
+        if (userStr) {
+          try {
+            const payload = JSON.parse(atob(userStr.split('.')[1]));
+            const role = (payload.scope || '').toLowerCase();
+            
+            // Navigate based on role
+            if (role === 'admin' || role === 'staff') {
+              navigate('/admin');
+            } else {
+              navigate('/');
+            }
+          } catch {
+            navigate('/');
+          }
+        } else {
+          navigate('/');
+        }
+      }, 100);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -189,9 +211,17 @@ const Login: React.FC = () => {
 
                 <button 
                   type="submit"
-                  className="w-full bg-[#1a1a1a] dark:bg-white text-white dark:text-black py-4 text-[11px] font-bold uppercase tracking-widest hover:bg-black dark:hover:bg-zinc-200 transition-all shadow-lg rounded-md"
+                  disabled={loading}
+                  className="w-full bg-[#1a1a1a] dark:bg-white text-white dark:text-black py-4 text-[11px] font-bold uppercase tracking-widest hover:bg-black dark:hover:bg-zinc-200 transition-all shadow-lg rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  ĐĂNG NHẬP
+                  {loading ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      ĐANG ĐĂNG NHẬP...
+                    </>
+                  ) : (
+                    'ĐĂNG NHẬP'
+                  )}
                 </button>
               </form>
 

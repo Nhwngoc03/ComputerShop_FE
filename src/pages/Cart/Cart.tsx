@@ -63,14 +63,14 @@ const Cart: React.FC = () => {
                 {/* Quantity Controls */}
                 <div className="flex items-center bg-gray-50 rounded-xl p-1">
                   <button 
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity - 1, item.cartItemId)}
                     className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-black transition"
                   >
                     <span className="material-symbols-outlined text-sm">remove</span>
                   </button>
                   <span className="w-10 text-center text-xs font-bold text-black">{item.quantity}</span>
                   <button 
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity + 1, item.cartItemId)}
                     className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-black transition"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
@@ -85,7 +85,7 @@ const Cart: React.FC = () => {
 
                 {/* Remove Button */}
                 <button 
-                  onClick={() => removeFromCart(item.id)}
+                  onClick={() => removeFromCart(item.id, item.cartItemId)}
                   className="p-2 text-gray-300 hover:text-red-500 transition"
                 >
                   <span className="material-symbols-outlined text-xl">close</span>

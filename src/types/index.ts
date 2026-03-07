@@ -14,6 +14,7 @@ export interface Product {
 
 export interface CartItem extends Product {
   quantity: number;
+  cartItemId?: number; // ID from backend cart item
 }
 
 export interface Order {

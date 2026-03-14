@@ -8,11 +8,12 @@ export interface CartItemResponse {
   productId?: number;
   productName?: string;
   price: number;
+  discountedPrice?: number;
   quantity: number;
   stockQuantity?: number;
   subtotal?: number;
-  thumbnailUrl?: string; // Backend uses thumbnailUrl
-  imageUrl?: string; // Backward compatibility
+  thumbnailUrl?: string;
+  imageUrl?: string;
 }
 
 export interface CartResponse {

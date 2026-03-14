@@ -6,12 +6,19 @@ export interface ProductImageResponse {
   isPrimary: boolean;
 }
 
+export interface VariantAttribute {
+  attributeId: number;
+  attributeName: string;
+  value: string;
+}
+
 export interface ProductVariantResponse {
   variantId: number;
   variantName: string;
+  sku?: string;
   price: number;
   stockQuantity: number;
-  attributes: Record<string, string>;
+  attributes: VariantAttribute[] | Record<string, string>;
 }
 
 export interface ProductResponse {
@@ -46,24 +53,37 @@ export interface ProductDetailResponse extends ProductResponse {
   specifications?: Record<string, string>;
 }
 
+export interface VariantCreationRequest {
+  sku: string;
+  variantName: string;
+  price: number;
+  stockQuantity: number;
+  attributes: { attributeId: number; attributeName: string; value: string }[];
+}
+
 export interface ProductCreationRequest {
-  name?: string; // Backend uses 'name'
-  productName?: string; // Keep for backward compatibility
+  name?: string;
   description?: string;
   categoryId: number;
   brandId: number;
-  basePrice: number;
-  specifications?: Record<string, string>;
+  variants?: VariantCreationRequest[];
+}
+
+export interface VariantUpdateRequest {
+  variantId?: number; // có = update existing, không có = tạo mới
+  sku?: string;
+  variantName?: string;
+  price?: number;
+  stockQuantity?: number;
+  attributes?: { attributeId: number; attributeName: string; value: string }[];
 }
 
 export interface ProductUpdateRequest {
-  name?: string; // Backend uses 'name'
-  productName?: string; // Keep for backward compatibility
+  name?: string;
   description?: string;
   categoryId?: number;
   brandId?: number;
-  basePrice?: number;
-  specifications?: Record<string, string>;
+  variants?: VariantUpdateRequest[];
 }
 
 export interface ProductFilterParams {

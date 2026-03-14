@@ -30,6 +30,8 @@ import CompareSearchModal from './src/components/ui/CompareSearchModal';
 import Cart from './src/pages/Cart/Cart';
 import Checkout from './src/pages/Cart/Checkout';
 import Compare from './src/pages/Compare/Compare';
+import OrderList from './src/pages/Orders/OrderList';
+import OrderDetail from './src/pages/Orders/OrderDetail';
 
 const App: React.FC = () => {
   return (
@@ -55,6 +57,18 @@ const App: React.FC = () => {
               <Route path="/admin/roles" element={<AdminRoles />} />
               <Route path="/admin/blogs" element={<AdminBlogs />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+
+              {/* Staff routes - same pages, different prefix */}
+              <Route path="/staff" element={<Dashboard />} />
+              <Route path="/staff/products" element={<AdminProducts />} />
+              <Route path="/staff/categories" element={<AdminCategories />} />
+              <Route path="/staff/brands" element={<AdminBrands />} />
+              <Route path="/staff/orders" element={<AdminOrders />} />
+              <Route path="/staff/orders/:id" element={<AdminOrderDetail />} />
+              <Route path="/staff/promotions" element={<AdminPromotions />} />
+              <Route path="/staff/installment-packages" element={<AdminInstallmentPackages />} />
+              <Route path="/staff/attributes" element={<AdminAttributes />} />
+              <Route path="/staff/blogs" element={<AdminBlogs />} />
               
               {/* Auth routes */}
               <Route path="/login" element={<Login />} />
@@ -73,6 +87,8 @@ const App: React.FC = () => {
                       <Route path="/cart" element={<Cart />} />
                       <Route path="/checkout" element={<Checkout />} />
                       <Route path="/compare" element={<Compare />} />
+                      <Route path="/orders" element={<OrderList />} />
+                      <Route path="/orders/:id" element={<OrderDetail />} />
                       <Route path="*" element={<Navigate to="/" />} />
                     </Routes>
                   </main>

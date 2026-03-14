@@ -24,15 +24,15 @@ const CompareBar: React.FC = () => {
               const item = compareItems[index];
               if (item) {
                 return (
-                  <div key={item.id} className="relative w-20 h-20 sm:w-24 sm:h-24 bg-white border border-gray-100 rounded-2xl p-2 group shadow-sm">
+                  <div key={item.productId} className="relative w-20 h-20 sm:w-24 sm:h-24 bg-white border border-gray-100 rounded-2xl p-2 group shadow-sm">
                     <img 
-                      src={item.image} 
+                      src={item.thumbnailUrl || ''} 
                       alt={item.name} 
                       className="w-full h-full object-contain"
                       referrerPolicy="no-referrer"
                     />
                     <button 
-                      onClick={() => removeFromCompare(item.id)}
+                      onClick={() => removeFromCompare(item.productId)}
                       className="absolute -top-2 -right-2 bg-white text-gray-400 w-6 h-6 rounded-full flex items-center justify-center shadow-md hover:text-red-500 transition border border-gray-50 z-10"
                     >
                       <span className="material-symbols-outlined text-sm">close</span>

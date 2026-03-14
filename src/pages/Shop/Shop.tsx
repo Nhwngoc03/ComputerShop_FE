@@ -2,83 +2,79 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ProductCard from '../../components/ui/ProductCard';
 import { productService } from '../../api/services/productService';
+import { categoryService } from '../../api/services/categoryService';
 import { ProductResponse } from '../../api/types/product';
-
-const CATEGORIES = [
-  { name: 'Tất cả', filter: null },
-  { name: 'Laptop', filter: 'Laptop' },
-  { name: 'Linh kiện', filter: 'Linh kiện' },
-  { name: 'CPU', filter: 'CPU' },
-  { name: 'VGA', filter: 'VGA' },
-  { name: 'Mainboard', filter: 'Mainboard' },
-  { name: 'RAM', filter: 'RAM' },
-  { name: 'SSD', filter: 'SSD' },
-  { name: 'Màn hình', filter: 'Màn hình' },
-  { name: 'Phụ kiện', filter: 'Phụ kiện' },
-];
+import { CategoryResponse } from '../../api/types/category';
 
 const Shop: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
-  const categoryFilter = queryParams.get('category');
+  const categoryFilter = queryParams.get('category'); // categoryId as string
   const searchFilter = queryParams.get('search');
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await productService.getAllProducts();
-        console.log('Shop - Fetched products:', data);
-        console.log('Shop - First product thumbnailUrl:', data[0]?.thumbnailUrl);
-        setProducts(data);
+        const [productsData, categoriesData] = await Promise.all([
+          productService.getAllProducts(),
+          categoryService.getAllCategories(),
+        ]);
+        setProducts(productsData);
+        setCategories(categoriesData);
       } catch (err: any) {
-        setError(err.message || 'Failed to load products');
-        console.error('Error fetching products:', err);
+        setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
-
-    fetchProducts();
+    fetchData();
   }, []);
 
   const filteredProducts = useMemo(() => {
     let result = products;
 
     if (categoryFilter) {
-      result = result.filter(p => 
-        (p.categoryName?.toLowerCase() === categoryFilter.toLowerCase()) ||
-        (p.name?.toLowerCase().includes(categoryFilter.toLowerCase())) ||
-        (p.productName?.toLowerCase().includes(categoryFilter.toLowerCase())) ||
-        (p.categoryName?.toLowerCase().includes(categoryFilter.toLowerCase()))
-      );
+      const catId = parseInt(categoryFilter);
+      if (!isNaN(catId)) {
+        result = result.filter(p => p.categoryId === catId);
+      } else {
+        // fallback: filter by name (từ header dropdown)
+        result = result.filter(p =>
+          p.categoryName?.toLowerCase().includes(categoryFilter.toLowerCase())
+        );
+      }
     }
 
     if (searchFilter) {
-      result = result.filter(p => 
-        (p.name?.toLowerCase().includes(searchFilter.toLowerCase())) ||
-        (p.productName?.toLowerCase().includes(searchFilter.toLowerCase())) ||
-        (p.brandName?.toLowerCase().includes(searchFilter.toLowerCase())) ||
-        (p.categoryName?.toLowerCase().includes(searchFilter.toLowerCase()))
+      result = result.filter(p =>
+        p.name?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        p.brandName?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        p.categoryName?.toLowerCase().includes(searchFilter.toLowerCase())
       );
     }
 
     return result;
   }, [products, categoryFilter, searchFilter]);
 
-  const handleCategoryChange = (filter: string | null) => {
-    if (filter) {
-      navigate(`/shop?category=${encodeURIComponent(filter)}`);
+  const handleCategoryChange = (categoryId: number | null) => {
+    if (categoryId !== null) {
+      navigate(`/shop?category=${categoryId}`);
     } else {
       navigate('/shop');
     }
   };
+
+  const activeCategoryName = categoryFilter
+    ? categories.find(c => c.categoryId === parseInt(categoryFilter))?.categoryName || categoryFilter
+    : null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 font-['Jost']">
@@ -89,19 +85,28 @@ const Shop: React.FC = () => {
             <div>
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6 border-b border-gray-100 pb-2">Danh mục</h3>
               <div className="flex flex-wrap lg:flex-col gap-2">
-                {CATEGORIES.map((cat) => (
+                <button
+                  onClick={() => handleCategoryChange(null)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all text-left flex items-center justify-between group ${
+                    !categoryFilter ? 'bg-black text-white shadow-lg shadow-black/10' : 'text-gray-500 hover:bg-gray-100 hover:text-black'
+                  }`}
+                >
+                  Tất cả
+                  <span className={`material-symbols-outlined text-sm ${!categoryFilter ? 'opacity-100' : 'opacity-0'}`}>chevron_right</span>
+                </button>
+                {categories.map((cat) => (
                   <button
-                    key={cat.name}
-                    onClick={() => handleCategoryChange(cat.filter)}
+                    key={cat.categoryId}
+                    onClick={() => handleCategoryChange(cat.categoryId)}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all text-left flex items-center justify-between group ${
-                      (categoryFilter === cat.filter) || (!categoryFilter && cat.filter === null)
+                      categoryFilter === String(cat.categoryId)
                         ? 'bg-black text-white shadow-lg shadow-black/10'
                         : 'text-gray-500 hover:bg-gray-100 hover:text-black'
                     }`}
                   >
-                    {cat.name}
+                    {cat.categoryName}
                     <span className={`material-symbols-outlined text-sm transition-transform group-hover:translate-x-1 ${
-                      (categoryFilter === cat.filter) || (!categoryFilter && cat.filter === null) ? 'opacity-100' : 'opacity-0'
+                      categoryFilter === String(cat.categoryId) ? 'opacity-100' : 'opacity-0'
                     }`}>chevron_right</span>
                   </button>
                 ))}
@@ -134,8 +139,8 @@ const Shop: React.FC = () => {
             <>
               <div className="mb-12">
                 <h1 className="text-4xl font-light uppercase tracking-tight text-black">
-                  {categoryFilter ? (
-                    <>Danh mục: <span className="font-bold">{categoryFilter}</span></>
+                  {activeCategoryName ? (
+                    <>Danh mục: <span className="font-bold">{activeCategoryName}</span></>
                   ) : searchFilter ? (
                     <>Kết quả tìm kiếm cho: <span className="font-bold">"{searchFilter}"</span></>
                   ) : (

@@ -35,47 +35,72 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle, ac
     return <Navigate to="/login" />;
   }
 
-  if (requiredRole && user && user.role !== requiredRole && user.role !== 'admin') {
+  if (requiredRole === 'admin' && user?.role !== 'admin') {
     return <Navigate to="/admin" />;
   }
 
-  const navItems = [
-    { path: '/admin', label: 'Tổng Quan', icon: 'dashboard' },
-    { path: '/admin/products', label: 'Sản Phẩm', icon: 'inventory_2' },
-    { path: '/admin/categories', label: 'Danh Mục', icon: 'category' },
-    { path: '/admin/brands', label: 'Thương Hiệu', icon: 'branding_watermark' },
-    { path: '/admin/attributes', label: 'Thuộc Tính', icon: 'label' },
-    { path: '/admin/blogs', label: 'Blogs', icon: 'article' },
-    { path: '/admin/orders', label: 'Đơn Hàng', icon: 'shopping_cart' },
-    { path: '/admin/promotions', label: 'Khuyến Mãi', icon: 'sell' },
-    { path: '/admin/installment-packages', label: 'Gói Trả Góp', icon: 'credit_card' },
-    { path: '/admin/users', label: 'Người Dùng', icon: 'group', adminOnly: true },
-    { path: '/admin/roles', label: 'Roles', icon: 'badge', adminOnly: true },
-    { path: '#', label: 'Cấu Hình', icon: 'settings' },
+  if (requiredRole === 'staff' && user?.role !== 'staff' && user?.role !== 'admin') {
+    return <Navigate to="/login" />;
+  }
+
+  const isAdmin = user?.role === 'admin';
+  const prefix = isAdmin ? '/admin' : '/staff';
+
+  // Redirect nếu đang ở sai prefix
+  const currentPrefix = location.pathname.startsWith('/admin') ? '/admin' : '/staff';
+  if (isAdmin && currentPrefix === '/staff') {
+    return <Navigate to={location.pathname.replace('/staff', '/admin')} />;
+  }
+  if (!isAdmin && currentPrefix === '/admin') {
+    return <Navigate to={location.pathname.replace('/admin', '/staff')} />;
+  }
+
+  const staffNavItems = [
+    { path: `${prefix}`, label: 'Tổng Quan', icon: 'dashboard' },
+    { path: `${prefix}/products`, label: 'Sản Phẩm', icon: 'inventory_2' },
+    { path: `${prefix}/categories`, label: 'Danh Mục', icon: 'category' },
+    { path: `${prefix}/brands`, label: 'Thương Hiệu', icon: 'branding_watermark' },
+    { path: `${prefix}/attributes`, label: 'Thuộc Tính', icon: 'label' },
+    { path: `${prefix}/blogs`, label: 'Blogs', icon: 'article' },
+    { path: `${prefix}/orders`, label: 'Đơn Hàng', icon: 'shopping_cart' },
+    { path: `${prefix}/promotions`, label: 'Khuyến Mãi', icon: 'sell' },
+    { path: `${prefix}/installment-packages`, label: 'Gói Trả Góp', icon: 'credit_card' },
   ];
 
-  const filteredNavItems = navItems.filter(item => !item.adminOnly || user?.role === 'admin');
+  const adminNavItems = [
+    { path: `/admin/users`, label: 'Người Dùng', icon: 'group' },
+    { path: `/admin/roles`, label: 'Roles', icon: 'badge' },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex font-['Jost']">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 hidden lg:flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-gray-100">
-          <Link to="/admin" className="text-xl font-bold text-blue-600 uppercase tracking-tight">
-            ViTinh<span className="text-gray-900">.admin</span>
+          <Link to={prefix} className="text-xl font-bold text-blue-600 uppercase tracking-tight">
+            ViTinh<span className="text-gray-900">.{user?.role || 'admin'}</span>
           </Link>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-800 truncate">{user?.name}</p>
+              <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${isAdmin ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                {user?.role}
+              </span>
+            </div>
+          </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
-          {filteredNavItems.map((item) => {
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {staffNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
-                key={item.label}
+                key={item.path}
                 to={item.path}
                 className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition ${
-                  isActive 
-                    ? 'bg-blue-50 text-blue-600 font-bold' 
-                    : 'text-gray-600 hover:bg-gray-50'
+                  isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 <span className="material-symbols-outlined mr-3 text-xl">{item.icon}</span>
@@ -83,6 +108,29 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title, subtitle, ac
               </Link>
             );
           })}
+
+          {isAdmin && (
+            <>
+              <div className="pt-4 pb-1 px-4">
+                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-400">Quản trị hệ thống</p>
+              </div>
+              {adminNavItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition ${
+                      isActive ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined mr-3 text-xl">{item.icon}</span>
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
         <div className="p-4 border-t border-gray-100">
           <button

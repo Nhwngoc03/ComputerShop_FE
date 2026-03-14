@@ -60,13 +60,6 @@ export const API_ENDPOINTS = {
   PROMOTION_ADD_TO_CATEGORY: `${API_VERSION}/promotions/add-to-category`,
   PROMOTION_ADD_TO_BRAND: `${API_VERSION}/promotions/add-to-brand`,
   
-  // Orders
-  ORDERS: `${API_VERSION}/orders`,
-  ORDERS_ME: `${API_VERSION}/orders/me`,
-  ORDER_BY_ID: (id: number) => `${API_VERSION}/orders/${id}`,
-  ORDER_UPDATE_STATUS: (id: number) => `${API_VERSION}/orders/${id}/status`,
-  ORDER_CANCEL: (id: number) => `${API_VERSION}/orders/${id}/cancel`,
-  
   // Payment
   PAYMENT_CREATE: `/orders/payment/createPayment`,
   PAYMENT_CALLBACK: `/orders/payment/callback`,

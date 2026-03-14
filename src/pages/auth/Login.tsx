@@ -123,55 +123,7 @@ const Login: React.FC = () => {
               </div>
 
               {/* Demo Accounts Tip */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-lg flex flex-col items-start gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-sm">admin_panel_settings</span>
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-blue-800 dark:text-blue-300">Admin</p>
-                  </div>
-                  <div className="text-[9px] text-blue-800 dark:text-blue-300">
-                    <p>admin@vitinh.com</p>
-                    <button 
-                      onClick={quickFillAdmin}
-                      className="mt-1 font-bold underline uppercase tracking-widest hover:text-blue-600 transition"
-                    >
-                      Nhập nhanh
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 p-4 rounded-lg flex flex-col items-start gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-purple-600 dark:text-purple-400 text-sm">badge</span>
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-purple-800 dark:text-purple-300">Staff</p>
-                  </div>
-                  <div className="text-[9px] text-purple-800 dark:text-purple-300">
-                    <p>staff@vitinh.com</p>
-                    <button 
-                      onClick={quickFillStaff}
-                      className="mt-1 font-bold underline uppercase tracking-widest hover:text-purple-600 transition"
-                    >
-                      Nhập nhanh
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 p-4 rounded-lg flex flex-col items-start gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-sm">person</span>
-                    <p className="text-[10px] font-bold uppercase tracking-tighter text-emerald-800 dark:text-emerald-300">User</p>
-                  </div>
-                  <div className="text-[9px] text-emerald-800 dark:text-emerald-300">
-                    <p>user@vitinh.com</p>
-                    <button 
-                      onClick={quickFillUser}
-                      className="mt-1 font-bold underline uppercase tracking-widest hover:text-emerald-600 transition"
-                    >
-                      Nhập nhanh
-                    </button>
-                  </div>
-                </div>
-              </div>
+              
 
               <form className="space-y-6" onSubmit={handleLogin}>
                 {error && (
@@ -180,7 +132,7 @@ const Login: React.FC = () => {
                 
                 <div className="space-y-2">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    SỐ ĐIỆN THOẠI / EMAIL
+                    EMAIL
                   </label>
                   <input 
                     type="text" 

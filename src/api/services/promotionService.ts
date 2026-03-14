@@ -7,7 +7,7 @@ import {
   PromotionUpdateRequest,
   AddPromotionToProductsRequest,
   AddPromotionToCategoryRequest,
-  AddPromotionToBrandRequest
+  AddPromotionToBrandRequest,
 } from '../types/promotion';
 
 export const promotionService = {

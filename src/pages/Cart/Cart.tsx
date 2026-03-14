@@ -80,7 +80,12 @@ const Cart: React.FC = () => {
                 {/* Price */}
                 <div className="text-center sm:text-right min-w-[100px]">
                   <p className="text-sm font-black text-black">${(item.price * item.quantity).toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">${item.price.toLocaleString()} / cái</p>
+                  <div className="flex flex-col items-end mt-1">
+                    <p className="text-[10px] text-gray-400">${item.price.toLocaleString()} / cái</p>
+                    {item.originalPrice && (
+                      <p className="text-[10px] text-red-400 line-through">${item.originalPrice.toLocaleString()}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Remove Button */}

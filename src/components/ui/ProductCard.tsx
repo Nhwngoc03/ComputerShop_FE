@@ -28,7 +28,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const productBrand = isApiProduct ? (product as ProductResponse).brandName || '' : (product as Product).brand;
   const productPrice = isApiProduct ? (product as ProductResponse).basePrice : (product as Product).price;
   const productTag = isApiProduct ? undefined : (product as Product).tag;
-  const productOriginalPrice = isApiProduct ? undefined : (product as Product).originalPrice;
+  const productOriginalPrice = isApiProduct
+    ? ((product as ProductResponse).discountedPrice ? (product as ProductResponse).basePrice : undefined)
+    : (product as Product).originalPrice;
+  const productDisplayPrice = isApiProduct
+    ? ((product as ProductResponse).discountedPrice ?? (product as ProductResponse).basePrice)
+    : (product as Product).price;
+  const hasDiscount = isApiProduct && !!(product as ProductResponse).discountedPrice;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -49,7 +55,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     if (isInCompare(productId)) {
       removeFromCompare(productId);
     } else {
-      addToCompare(product as Product);
+      if (isApiProduct) {
+        addToCompare(product as ProductResponse);
+      } else {
+        // Convert old Product type to ProductResponse shape
+        const p = product as Product;
+        addToCompare({
+          productId: Number(p.id),
+          name: p.name,
+          basePrice: p.price,
+          discountedPrice: p.originalPrice ? p.price : undefined,
+          thumbnailUrl: p.image,
+          brandName: p.brand,
+          categoryId: 0,
+          categoryName: p.category,
+          brandId: 0,
+        } as ProductResponse);
+      }
     }
   };
 
@@ -66,6 +88,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             productTag === 'Giảm giá' ? 'bg-red-600 text-white' : 'bg-black text-white'
           }`}>
             {productTag}
+          </span>
+        )}
+        {hasDiscount && !productTag && (
+          <span className="absolute top-4 left-4 z-10 text-[10px] font-bold px-2 py-1 uppercase tracking-widest shadow-sm bg-red-600 text-white">
+            -{Math.round((1 - (product as ProductResponse).discountedPrice! / (product as ProductResponse).basePrice) * 100)}%
           </span>
         )}
         <button 
@@ -111,9 +138,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition truncate">{productName}</h3>
         </Link>
         <div className="mt-2 flex justify-center items-center space-x-3">
-          <span className="text-sm font-bold">{productPrice.toLocaleString('vi-VN')} đ</span>
-          {productOriginalPrice && (
-            <span className="text-xs text-gray-400 line-through">{productOriginalPrice.toLocaleString('vi-VN')} đ</span>
+          {hasDiscount ? (
+            <>
+              <span className="text-sm font-bold text-black">${productDisplayPrice.toLocaleString()}</span>
+              <span className="text-xs text-red-500 line-through">${productPrice.toLocaleString()}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-bold">${(isApiProduct ? productDisplayPrice : productPrice).toLocaleString()}</span>
+              {productOriginalPrice && (
+                <span className="text-xs text-red-500 line-through">${productOriginalPrice.toLocaleString()}</span>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -227,11 +227,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount }) => {
           Build PC
         </Link>
 
-        {/* Shop Link */}
-        <Link to="/shop" className="hidden lg:flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest text-gray-600 hover:text-black transition">
-          <span className="material-symbols-outlined text-xl">shopping_bag</span>
-          Cửa hàng
-        </Link>
+
 
         {/* Search Bar */}
         <div className="flex-1 relative min-w-[150px]" ref={searchRef}>
@@ -349,12 +345,22 @@ const Header: React.FC<HeaderProps> = ({ cartCount }) => {
                       Quản lý
                     </Link>
                   )}
+                  {user?.role === 'staff' && (
+                    <Link 
+                      to="/staff" 
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 w-full p-3 text-left text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-50 hover:text-black transition rounded-lg"
+                    >
+                      <span className="material-symbols-outlined text-lg">dashboard</span>
+                      Quản lý
+                    </Link>
+                  )}
                   <Link 
-                    to="/cart" 
+                    to="/orders" 
                     onClick={() => setShowUserMenu(false)}
                     className="flex items-center gap-3 w-full p-3 text-left text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-50 hover:text-black transition rounded-lg"
                   >
-                    <span className="material-symbols-outlined text-lg">shopping_bag</span>
+                    <span className="material-symbols-outlined text-lg">receipt_long</span>
                     Đơn hàng
                   </Link>
                   <button 

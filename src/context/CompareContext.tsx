@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Product } from '../types/index';
+import { ProductResponse } from '../api/types/product';
 
 interface CompareContextType {
-  compareItems: Product[];
-  addToCompare: (product: Product) => void;
-  removeFromCompare: (productId: string) => void;
+  compareItems: ProductResponse[];
+  addToCompare: (product: ProductResponse) => void;
+  removeFromCompare: (productId: number) => void;
   clearCompare: () => void;
-  isInCompare: (productId: string) => boolean;
+  isInCompare: (productId: number) => boolean;
   isSearchModalOpen: boolean;
   openSearchModal: () => void;
   closeSearchModal: () => void;
@@ -15,43 +15,42 @@ interface CompareContextType {
 const CompareContext = createContext<CompareContextType | undefined>(undefined);
 
 export const CompareProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [compareItems, setCompareItems] = useState<Product[]>([]);
+  const [compareItems, setCompareItems] = useState<ProductResponse[]>([]);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  const addToCompare = (product: Product) => {
-    if (compareItems.find((item) => item.id === product.id)) return;
+  const addToCompare = (product: ProductResponse) => {
+    if (compareItems.find((item) => item.productId === product.productId)) return;
     if (compareItems.length >= 3) {
       alert('Bạn chỉ có thể so sánh tối đa 3 sản phẩm cùng lúc.');
+      return;
+    }
+    // Chỉ cho phép cùng category nếu đã có sản phẩm
+    if (compareItems.length > 0 && compareItems[0].categoryId !== product.categoryId) {
+      alert(`Chỉ có thể so sánh các sản phẩm cùng danh mục "${compareItems[0].categoryName}".`);
       return;
     }
     setCompareItems((prev) => [...prev, product]);
   };
 
-  const removeFromCompare = (productId: string) => {
-    setCompareItems((prev) => prev.filter((item) => item.id !== productId));
+  const removeFromCompare = (productId: number) => {
+    setCompareItems((prev) => prev.filter((item) => item.productId !== productId));
   };
 
-  const clearCompare = () => {
-    setCompareItems([]);
-  };
+  const clearCompare = () => setCompareItems([]);
 
-  const isInCompare = (productId: string) => {
-    return compareItems.some((item) => item.id === productId);
-  };
-
-  const openSearchModal = () => setIsSearchModalOpen(true);
-  const closeSearchModal = () => setIsSearchModalOpen(false);
+  const isInCompare = (productId: number) =>
+    compareItems.some((item) => item.productId === productId);
 
   return (
-    <CompareContext.Provider value={{ 
-      compareItems, 
-      addToCompare, 
-      removeFromCompare, 
-      clearCompare, 
+    <CompareContext.Provider value={{
+      compareItems,
+      addToCompare,
+      removeFromCompare,
+      clearCompare,
       isInCompare,
       isSearchModalOpen,
-      openSearchModal,
-      closeSearchModal
+      openSearchModal: () => setIsSearchModalOpen(true),
+      closeSearchModal: () => setIsSearchModalOpen(false),
     }}>
       {children}
     </CompareContext.Provider>
@@ -60,8 +59,6 @@ export const CompareProvider: React.FC<{ children: ReactNode }> = ({ children })
 
 export const useCompare = () => {
   const context = useContext(CompareContext);
-  if (context === undefined) {
-    throw new Error('useCompare must be used within a CompareProvider');
-  }
+  if (!context) throw new Error('useCompare must be used within a CompareProvider');
   return context;
 };

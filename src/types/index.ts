@@ -15,6 +15,7 @@ export interface Product {
 export interface CartItem extends Product {
   quantity: number;
   cartItemId?: number; // ID from backend cart item
+  discountedPrice?: number; // Giá sau giảm giá nếu có
 }
 
 export interface Order {

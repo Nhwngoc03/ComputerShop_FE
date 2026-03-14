@@ -121,33 +121,35 @@ export const authService = {
       console.log('getCurrentUser - introspect result:', introspectResult);
       
       if (introspectResult.valid) {
-        // Nếu introspect không trả về email/role, decode từ JWT token
-        if (!introspectResult.email) {
-          const token = localStorage.getItem('authToken');
-          if (token) {
-            try {
-              // Decode JWT token (phần payload là phần giữa của token)
-              const payload = JSON.parse(atob(token.split('.')[1]));
-              console.log('getCurrentUser - decoded token payload:', payload);
-              
-              return {
-                email: payload.sub || payload.email || '',
-                role: payload.scope || payload.role || 'user',
-              };
-            } catch (decodeError) {
-              console.error('Failed to decode token:', decodeError);
-            }
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            console.log('getCurrentUser - full decoded payload:', JSON.stringify(payload));
+            
+            // Backend có thể dùng nhiều field khác nhau cho role
+            const rawRole = payload.scope || payload.role || payload.roles || 
+                           payload.authorities || payload.roleName || '';
+            
+            // Xử lý nếu role là array
+            const roleStr = Array.isArray(rawRole) ? rawRole[0] : rawRole;
+            
+            // Bỏ prefix ROLE_ nếu có
+            const cleanRole = roleStr.replace('ROLE_', '').toUpperCase();
+            
+            console.log('getCurrentUser - extracted role:', cleanRole);
+            
+            return {
+              email: payload.sub || payload.email || '',
+              role: cleanRole || 'MEMBER',
+              name: payload.name || payload.username || '',
+            };
+          } catch (decodeError) {
+            console.error('Failed to decode token:', decodeError);
           }
-        } else {
-          // Nếu introspect có email/role thì dùng luôn
-          return {
-            email: introspectResult.email,
-            role: introspectResult.role || 'user',
-          };
         }
       }
       
-      console.log('getCurrentUser - invalid or no email');
       return null;
     } catch (error) {
       console.error('Get current user error:', error);

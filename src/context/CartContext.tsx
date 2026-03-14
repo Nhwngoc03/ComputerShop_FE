@@ -27,19 +27,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Convert API CartResponse to local CartItem format
   const convertApiCartToLocal = (apiCart: CartResponse): CartItem[] => {
-    return apiCart.items.map(item => ({
-      id: item.variantId.toString(),
-      cartItemId: item.cartItemId,
-      name: item.productName || item.variantName || 'Unknown Product',
-      price: item.price,
-      quantity: item.quantity,
-      image: item.thumbnailUrl || item.imageUrl || '/placeholder.png',
-      category: '',
-      description: '',
-      rating: 0,
-      reviews: 0,
-      inStock: true,
-    }));
+    return apiCart.items.map(item => {
+      const effectivePrice = item.discountedPrice ?? item.price;
+      return {
+        id: item.variantId.toString(),
+        cartItemId: item.cartItemId,
+        name: item.productName || item.variantName || 'Unknown Product',
+        price: effectivePrice,
+        discountedPrice: item.discountedPrice,
+        quantity: item.quantity,
+        image: item.thumbnailUrl || item.imageUrl || '/placeholder.png',
+        brand: '',
+        category: '',
+        description: '',
+        rating: 0,
+        reviews: 0,
+        inStock: true,
+      };
+    });
   };
 
   // Fetch cart from API if authenticated

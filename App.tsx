@@ -32,6 +32,8 @@ import Checkout from './src/pages/Cart/Checkout';
 import Compare from './src/pages/Compare/Compare';
 import OrderList from './src/pages/Orders/OrderList';
 import OrderDetail from './src/pages/Orders/OrderDetail';
+import WarrantyLookup from './src/pages/Warranty/WarrantyLookup';
+import PaymentCallback from './src/pages/PaymentCallback';
 
 const App: React.FC = () => {
   return (
@@ -89,6 +91,10 @@ const App: React.FC = () => {
                       <Route path="/compare" element={<Compare />} />
                       <Route path="/orders" element={<OrderList />} />
                       <Route path="/orders/:id" element={<OrderDetail />} />
+                      <Route path="/warranty" element={<WarrantyLookup />} />
+                      <Route path="/payment-callback" element={<PaymentCallback />} />
+                      <Route path="/payment-success" element={<PaymentCallback />} />
+                      <Route path="/payment-failed" element={<PaymentCallback />} />
                       <Route path="*" element={<Navigate to="/" />} />
                     </Routes>
                   </main>

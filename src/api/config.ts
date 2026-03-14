@@ -60,6 +60,25 @@ export const API_ENDPOINTS = {
   PROMOTION_ADD_TO_CATEGORY: `${API_VERSION}/promotions/add-to-category`,
   PROMOTION_ADD_TO_BRAND: `${API_VERSION}/promotions/add-to-brand`,
   
+  // PC Builds
+  PC_BUILDS: `${API_VERSION}/pc-builds`,
+  PC_BUILDS_DRAFT: `${API_VERSION}/pc-builds/draft`,
+  PC_BUILDS_DRAFT_ITEMS: `${API_VERSION}/pc-builds/draft/items`,
+  PC_BUILDS_DRAFT_SAVE: `${API_VERSION}/pc-builds/draft/save`,
+  PC_BUILDS_DRAFT_ORDER: `${API_VERSION}/pc-builds/draft/order`,
+  PC_BUILDS_COMPATIBLE: `${API_VERSION}/pc-builds/compatible-variants`,
+
+  // Warranties
+  WARRANTY_BY_ID: (id: number) => `${API_VERSION}/warranties/${id}`,
+  WARRANTIES_BY_ORDER: (orderId: number) => `${API_VERSION}/warranties/order/${orderId}`,
+  WARRANTIES_BY_PHONE: (phone: string) => `${API_VERSION}/warranties/phone/${phone}`,
+  WARRANTY_UPDATE_STATUS: (id: number) => `${API_VERSION}/warranties/${id}/status`,
+
+  // Warranty Claims
+  CLAIMS: `${API_VERSION}/claims`,
+  CLAIM_BY_ID: (id: number) => `${API_VERSION}/claims/${id}`,
+  CLAIMS_BY_WARRANTY: (warrantyId: number) => `${API_VERSION}/claims/warranty/${warrantyId}`,
+
   // Payment
   PAYMENT_CREATE: `/orders/payment/createPayment`,
   PAYMENT_CALLBACK: `/orders/payment/callback`,

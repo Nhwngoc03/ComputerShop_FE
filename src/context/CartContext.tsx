@@ -157,7 +157,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Show more detailed error message
       let errorMessage = 'Không thể thêm vào giỏ hàng.';
-      if (error.message) {
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message?.toLowerCase().includes('stock') || error.message?.toLowerCase().includes('tồn kho') || error.code === 1008) {
+        errorMessage = 'Sản phẩm đã hết hàng hoặc không đủ số lượng.';
+      } else if (error.message) {
         errorMessage = error.message;
       } else if (error.code === 9999) {
         errorMessage = 'Lỗi hệ thống. Sản phẩm có thể không tồn tại hoặc hết hàng.';

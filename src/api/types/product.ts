@@ -33,6 +33,7 @@ export interface ProductResponse {
   basePrice: number;
   discountedPrice?: number;
   thumbnailUrl?: string;
+  warrantyMonths?: number;
   variants?: ProductVariantResponse[];
   // Computed fields (not from backend directly)
   productName?: string; // Alias for 'name' (backward compatibility)
@@ -66,6 +67,7 @@ export interface ProductCreationRequest {
   description?: string;
   categoryId: number;
   brandId: number;
+  warrantyMonths?: number;
   variants?: VariantCreationRequest[];
 }
 
@@ -83,6 +85,7 @@ export interface ProductUpdateRequest {
   description?: string;
   categoryId?: number;
   brandId?: number;
+  warrantyMonths?: number;
   variants?: VariantUpdateRequest[];
 }
 

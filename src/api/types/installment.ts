@@ -7,8 +7,9 @@ export interface InstallmentPackageResponse {
   interestRate: number;
   minOrderAmount: number;
   maxOrderAmount?: number;
+  downPaymentPercent?: number; // % trả trước (0 nếu không có)
   description?: string;
-  active: boolean; // Response uses 'active'
+  active: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -19,6 +20,7 @@ export interface InstallmentPackageRequest {
   interestRate: number;
   minOrderAmount: number;
   maxOrderAmount?: number;
+  downPaymentPercent?: number;
   description?: string;
-  isActive?: boolean; // Request expects 'isActive'
+  isActive?: boolean;
 }

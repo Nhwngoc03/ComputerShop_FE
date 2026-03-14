@@ -16,6 +16,7 @@ const AdminInstallmentPackages: React.FC = () => {
     interestRate: 0,
     minOrderAmount: 0,
     maxOrderAmount: 0,
+    downPaymentPercent: 0,
     description: '',
     active: true,
   });
@@ -49,18 +50,14 @@ const AdminInstallmentPackages: React.FC = () => {
         durationMonths: formData.durationMonths,
         interestRate: formData.interestRate,
         minOrderAmount: formData.minOrderAmount,
-        isActive: formData.active, // Backend expects isActive
+        downPaymentPercent: formData.downPaymentPercent || 0,
+        isActive: formData.active,
       };
       
-      // Only add optional fields if they have values
-      if (formData.maxOrderAmount > 0) {
-        request.maxOrderAmount = formData.maxOrderAmount;
-      }
-      if (formData.description.trim()) {
-        request.description = formData.description.trim();
-      }
+      if (formData.maxOrderAmount > 0) request.maxOrderAmount = formData.maxOrderAmount;
+      if (formData.description.trim()) request.description = formData.description.trim();
       
-      console.log('Creating package with request:', request); // Debug log
+      console.log('Creating package with request:', request);
       await installmentService.createPackage(request);
       setShowAddModal(false);
       resetForm();
@@ -83,18 +80,14 @@ const AdminInstallmentPackages: React.FC = () => {
         durationMonths: formData.durationMonths,
         interestRate: formData.interestRate,
         minOrderAmount: formData.minOrderAmount,
-        isActive: formData.active, // Backend expects isActive
+        downPaymentPercent: formData.downPaymentPercent || 0,
+        isActive: formData.active,
       };
       
-      // Only add optional fields if they have values
-      if (formData.maxOrderAmount > 0) {
-        request.maxOrderAmount = formData.maxOrderAmount;
-      }
-      if (formData.description.trim()) {
-        request.description = formData.description.trim();
-      }
+      if (formData.maxOrderAmount > 0) request.maxOrderAmount = formData.maxOrderAmount;
+      if (formData.description.trim()) request.description = formData.description.trim();
       
-      console.log('Updating package with request:', request); // Debug log
+      console.log('Updating package with request:', request);
       await installmentService.updatePackage(selectedPackage.packageId, request);
       setShowEditModal(false);
       setSelectedPackage(null);
@@ -126,6 +119,7 @@ const AdminInstallmentPackages: React.FC = () => {
       interestRate: pkg.interestRate,
       minOrderAmount: pkg.minOrderAmount,
       maxOrderAmount: pkg.maxOrderAmount || 0,
+      downPaymentPercent: pkg.downPaymentPercent || 0,
       description: pkg.description || '',
       active: pkg.active,
     });
@@ -139,6 +133,7 @@ const AdminInstallmentPackages: React.FC = () => {
       interestRate: 0,
       minOrderAmount: 0,
       maxOrderAmount: 0,
+      downPaymentPercent: 0,
       description: '',
       active: true,
     });
@@ -189,6 +184,7 @@ const AdminInstallmentPackages: React.FC = () => {
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tên gói</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Thời hạn</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Lãi suất</th>
+                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Trả trước</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Giá trị đơn</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Trạng thái</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right">Thao tác</th>
@@ -208,6 +204,11 @@ const AdminInstallmentPackages: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-bold text-blue-600">{pkg.interestRate}%</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-bold text-amber-600">
+                      {pkg.downPaymentPercent ? `${pkg.downPaymentPercent}%` : '—'}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-xs text-gray-600">
@@ -295,31 +296,18 @@ const AdminInstallmentPackages: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Lãi suất (%)</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.interestRate === 0 ? '' : formData.interestRate}
-                    onChange={(e) => setFormData({ ...formData, interestRate: parseFloat(e.target.value) || 0 })}
-                    className="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-1 focus:ring-blue-500 outline-none text-sm"
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-1 flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.active}
-                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Kích hoạt gói</span>
-                  </label>
-                </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Lãi suất (%)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={formData.interestRate === 0 ? '' : formData.interestRate}
+                  onChange={(e) => setFormData({ ...formData, interestRate: parseFloat(e.target.value) || 0 })}
+                  className="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-1 focus:ring-blue-500 outline-none text-sm"
+                  placeholder="0"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -347,6 +335,33 @@ const AdminInstallmentPackages: React.FC = () => {
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">% Trả trước (0 = không yêu cầu)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.downPaymentPercent === 0 ? '' : formData.downPaymentPercent}
+                    onChange={(e) => setFormData({ ...formData, downPaymentPercent: parseInt(e.target.value) || 0 })}
+                    className="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-1 focus:ring-blue-500 outline-none text-sm"
+                    placeholder="20"
+                  />
+                </div>
+                <div className="space-y-1 flex items-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.active}
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Kích hoạt gói</span>
+                  </label>
+                </div>
+              </div>
+
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mô tả (tùy chọn)</label>
@@ -428,17 +443,6 @@ const AdminInstallmentPackages: React.FC = () => {
                     className="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-1 focus:ring-blue-500 outline-none text-sm"
                   />
                 </div>
-                <div className="space-y-1 flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.active}
-                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Kích hoạt gói</span>
-                  </label>
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -462,6 +466,31 @@ const AdminInstallmentPackages: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, maxOrderAmount: parseInt(e.target.value) || 0 })}
                     className="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-1 focus:ring-blue-500 outline-none text-sm"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">% Trả trước (0 = không yêu cầu)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.downPaymentPercent || ''}
+                    onChange={(e) => setFormData({ ...formData, downPaymentPercent: parseInt(e.target.value) || 0 })}
+                    className="w-full p-3 bg-gray-50 border-none rounded-xl focus:ring-1 focus:ring-blue-500 outline-none text-sm"
+                  />
+                </div>
+                <div className="space-y-1 flex items-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.active}
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Kích hoạt gói</span>
+                  </label>
                 </div>
               </div>
 

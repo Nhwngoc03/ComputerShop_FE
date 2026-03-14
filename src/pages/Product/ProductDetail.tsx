@@ -267,7 +267,7 @@ const ProductDetail: React.FC = () => {
           <div className="mt-8 flex items-center space-x-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">verified_user</span>
-              Bảo hành chính hãng
+              {product.warrantyMonths ? `Bảo hành ${product.warrantyMonths} tháng` : 'Bảo hành chính hãng'}
             </div>
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-lg">local_shipping</span>

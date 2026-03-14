@@ -21,6 +21,7 @@ const OrderDetail: React.FC = () => {
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [payingNext, setPayingNext] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -45,6 +46,23 @@ const OrderDetail: React.FC = () => {
     }
   };
 
+  const handlePayNextInstallment = async () => {
+    if (!order) return;
+    setPayingNext(true);
+    try {
+      // Giả lập thanh toán thành công — reload lại đơn hàng để cập nhật lịch
+      await new Promise(res => setTimeout(res, 1000)); // giả lập delay
+      alert('Thanh toán kỳ này thành công! (Giả lập)');
+      // Reload order để cập nhật trạng thái
+      const updated = await orderService.getOrderById(order.orderId);
+      setOrder(updated);
+    } catch (err: any) {
+      alert(err.message || 'Không thể thanh toán. Vui lòng thử lại.');
+    } finally {
+      setPayingNext(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[40vh]">
@@ -65,6 +83,12 @@ const OrderDetail: React.FC = () => {
   const st = statusLabel[order.status] ?? { label: order.status, color: 'bg-gray-100 text-gray-500' };
   const date = order.orderDate || order.createdAt;
   const canCancel = ['PENDING', 'CONFIRMED'].includes(order.status);
+
+  // Find next unpaid installment
+  const nextUnpaid = order.payments?.find(p => p.status === 'UNPAID' || p.status === 'PENDING');
+  const hasUnpaidInstallment = order.paymentType === 'INSTALLMENT' && !!nextUnpaid;
+  const paidCount = order.payments?.filter(p => p.status === 'PAID').length ?? 0;
+  const totalCount = order.payments?.length ?? 0;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 font-['Jost']">
@@ -121,24 +145,46 @@ const OrderDetail: React.FC = () => {
           {/* Installment schedule */}
           {order.payments && order.payments.length > 0 && (
             <div className="bg-white border border-gray-100 rounded-2xl p-6">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-6 pb-2 border-b border-gray-50">Lịch trả góp</h3>
+              <div className="flex items-center justify-between mb-6 pb-2 border-b border-gray-50">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                  Lịch trả góp
+                </h3>
+                <span className="text-[10px] font-bold text-gray-400">
+                  {paidCount}/{totalCount} kỳ đã trả
+                </span>
+              </div>
               <div className="space-y-3">
-                {order.payments.map((p) => (
-                  <div key={p.scheduleId} className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-medium text-black">{new Date(p.dueDate).toLocaleDateString('vi-VN')}</p>
-                      {p.paidDate && <p className="text-[10px] text-gray-400">Đã trả: {new Date(p.paidDate).toLocaleDateString('vi-VN')}</p>}
+                {order.payments.map((p, idx) => {
+                  const isPaid = p.status === 'PAID';
+                  const isNext = p.scheduleId === nextUnpaid?.scheduleId;
+                  const isOverdue = p.status === 'OVERDUE';
+                  return (
+                    <div key={p.scheduleId} className={`flex items-center justify-between text-sm p-3 rounded-xl ${isNext ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${isPaid ? 'bg-green-500 text-white' : isOverdue ? 'bg-red-400 text-white' : isNext ? 'bg-amber-400 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                          {isPaid ? '✓' : idx + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium text-black text-xs">
+                            {idx === 0 ? 'Trả trước' : `Kỳ ${idx}`} — {new Date(p.dueDate).toLocaleDateString('vi-VN')}
+                          </p>
+                          {p.paidDate && <p className="text-[10px] text-gray-400">Đã trả: {new Date(p.paidDate).toLocaleDateString('vi-VN')}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-sm">${p.amount.toLocaleString()}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                          isPaid ? 'bg-green-100 text-green-700' :
+                          isOverdue ? 'bg-red-100 text-red-700' :
+                          isNext ? 'bg-amber-100 text-amber-700' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {isPaid ? 'Đã trả' : isOverdue ? 'Quá hạn' : isNext ? 'Cần trả' : 'Chờ'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <p className="font-bold">${p.amount.toLocaleString()}</p>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        p.status === 'PAID' ? 'bg-green-100 text-green-700' :
-                        p.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>{p.status === 'PAID' ? 'Đã trả' : p.status === 'OVERDUE' ? 'Quá hạn' : 'Chờ trả'}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -171,6 +217,22 @@ const OrderDetail: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Pay next installment */}
+          {hasUnpaidInstallment && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Kỳ thanh toán tiếp theo</p>
+              <p className="text-2xl font-black text-amber-700 mb-3">${nextUnpaid!.amount.toLocaleString()}</p>
+              <p className="text-xs text-amber-600 mb-4">Hạn: {new Date(nextUnpaid!.dueDate).toLocaleDateString('vi-VN')}</p>
+              <button
+                onClick={handlePayNextInstallment}
+                disabled={payingNext}
+                className="w-full py-3 bg-amber-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-amber-600 transition disabled:opacity-50"
+              >
+                {payingNext ? 'Đang xử lý...' : 'Thanh toán ngay'}
+              </button>
+            </div>
+          )}
 
           {/* Cancel */}
           {canCancel && (

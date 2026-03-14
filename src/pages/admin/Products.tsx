@@ -39,6 +39,7 @@ const AdminProducts: React.FC = () => {
     description: '',
     categoryId: 0,
     brandId: 0,
+    warrantyMonths: '',
   });
   const [variants, setVariants] = useState<VariantForm[]>([emptyVariant()]);
   const [editVariants, setEditVariants] = useState<VariantForm[]>([]);
@@ -187,6 +188,7 @@ const AdminProducts: React.FC = () => {
         description: formData.description.trim() || undefined,
         categoryId: formData.categoryId,
         brandId: formData.brandId,
+        warrantyMonths: formData.warrantyMonths ? parseInt(formData.warrantyMonths) : undefined,
         variants: parsedVariants,
       }, images.length > 0 ? images : undefined);
       setShowAddModal(false);
@@ -216,6 +218,8 @@ const AdminProducts: React.FC = () => {
         updateData.categoryId = formData.categoryId;
       if (formData.brandId && formData.brandId !== selectedProduct.brandId)
         updateData.brandId = formData.brandId;
+      if (formData.warrantyMonths !== '')
+        updateData.warrantyMonths = parseInt(formData.warrantyMonths) || undefined;
 
       // Always send variants so backend can sync (update/create/delete)
       updateData.variants = editVariants
@@ -246,6 +250,7 @@ const AdminProducts: React.FC = () => {
       description: product.description || '',
       categoryId: product.categoryId || 0,
       brandId: product.brandId || 0,
+      warrantyMonths: product.warrantyMonths ? String(product.warrantyMonths) : '',
     });
     // Load existing variants into edit form
     const existingVariants: VariantForm[] = (product.variants || []).map((v) => {
@@ -273,7 +278,7 @@ const AdminProducts: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({ productName: '', description: '', categoryId: 0, brandId: 0 });
+    setFormData({ productName: '', description: '', categoryId: 0, brandId: 0, warrantyMonths: '' });
     setVariants([emptyVariant()]);
     setEditVariants([]);
     setImages([]);
@@ -461,6 +466,12 @@ const AdminProducts: React.FC = () => {
 
               {/* Images */}
               <div>
+                <label className={labelCls}>Bảo hành (tháng)</label>
+                <input type="text" inputMode="numeric" placeholder="VD: 24" value={formData.warrantyMonths} onChange={(e) => setFormData({ ...formData, warrantyMonths: e.target.value })} className={inputCls} />
+              </div>
+
+              {/* Images */}
+              <div>
                 <label className={labelCls}>Hình ảnh</label>
                 <input type="file" multiple accept="image/*" onChange={(e) => e.target.files && setImages(Array.from(e.target.files))} className={inputCls} />
                 {images.length > 0 && <p className="text-xs text-gray-400 mt-1">{images.length} file đã chọn</p>}
@@ -600,6 +611,12 @@ const AdminProducts: React.FC = () => {
                     {brands.map((b) => <option key={b.brandId} value={b.brandId}>{b.brandName}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Images */}
+              <div>
+                <label className={labelCls}>Bảo hành (tháng)</label>
+                <input type="text" inputMode="numeric" placeholder="VD: 24" value={formData.warrantyMonths} onChange={(e) => setFormData({ ...formData, warrantyMonths: e.target.value })} className={inputCls} />
               </div>
 
               {/* Images */}

@@ -1,9 +1,11 @@
 // Payment API Types
 
 export interface PaymentDTO {
+  code?: string;
+  message?: string;
   paymentUrl: string;
-  orderId: number;
-  amount: number;
+  orderId?: number;
+  amount?: number;
   bankCode?: string;
 }
 

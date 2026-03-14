@@ -8,6 +8,32 @@ import { OrderResponse } from '../../api/types/order';
 import { UserResponse } from '../../api/types/user';
 import { ProductResponse } from '../../api/types/product';
 
+// Doanh thu thực thu: chỉ tính đơn FULL đã hoàn thành
+// INSTALLMENT sẽ tính lại sau khi BE fix trả payments
+const getActualRevenue = (order: OrderResponse): number => {
+  if (order.paymentType === 'INSTALLMENT') {
+    // Nếu có payments detail thì tính chính xác
+    if (order.payments?.length) {
+      return order.payments
+        .filter(p => p.status === 'PAID')
+        .reduce((sum, p) => sum + p.amount, 0);
+    }
+    // Fallback: hoàn thành → tính toàn bộ
+    return ['COMPLETED', 'PAID'].includes(order.status) ? order.totalAmount : 0;
+  }
+  return ['COMPLETED', 'PAID', 'DELIVERED'].includes(order.status) ? order.totalAmount : 0;
+};
+
+const statusLabel: Record<string, { label: string; color: string }> = {
+  PENDING:   { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-700' },
+  CONFIRMED: { label: 'Đã xác nhận',  color: 'bg-blue-100 text-blue-700' },
+  DELIVERED: { label: 'Đang giao',    color: 'bg-purple-100 text-purple-700' },
+  COMPLETED: { label: 'Hoàn thành',   color: 'bg-green-100 text-green-700' },
+  CANCELLED: { label: 'Đã hủy',       color: 'bg-red-100 text-red-700' },
+  PAID:      { label: 'Đã thanh toán',color: 'bg-emerald-100 text-emerald-700' },
+  FAILED:    { label: 'Thất bại',     color: 'bg-gray-100 text-gray-500' },
+};
+
 const Dashboard: React.FC = () => {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [users, setUsers] = useState<UserResponse[]>([]);
@@ -26,28 +52,35 @@ const Dashboard: React.FC = () => {
     }).finally(() => setLoading(false));
   }, []);
 
-  // --- Stats ---
-  const totalRevenue = orders
-    .filter(o => ['COMPLETED', 'PAID', 'DELIVERED'].includes(o.status))
-    .reduce((sum, o) => sum + o.totalAmount, 0);
+  // Doanh thu thực thu (không tính phần trả góp chưa trả)
+  const totalRevenue = orders.reduce((sum, o) => sum + getActualRevenue(o), 0);
+
+  // Doanh thu tiềm năng (tổng giá trị đơn đang active)
+  const pendingRevenue = orders
+    .filter(o => o.paymentType === 'INSTALLMENT' && !['CANCELLED', 'FAILED'].includes(o.status))
+    .reduce((sum, o) => {
+      const paid = (o.payments || []).filter(p => p.status === 'PAID').reduce((s, p) => s + p.amount, 0);
+      return sum + (o.totalAmount - paid);
+    }, 0);
 
   const pendingOrders = orders.filter(o => o.status === 'PENDING').length;
+  const installmentOrders = orders.filter(o => o.paymentType === 'INSTALLMENT').length;
 
-  // --- Chart: doanh thu theo tháng (từ orderDate) ---
+  // Chart: doanh thu thực thu theo tháng
   const revenueByMonth: Record<string, number> = {};
-  orders
-    .filter(o => ['COMPLETED', 'PAID', 'DELIVERED'].includes(o.status))
-    .forEach(o => {
-      const date = o.orderDate || o.createdAt;
-      if (!date) return;
-      const month = `T${new Date(date).getMonth() + 1}`;
-      revenueByMonth[month] = (revenueByMonth[month] || 0) + o.totalAmount;
-    });
+  orders.forEach(o => {
+    const rev = getActualRevenue(o);
+    if (rev <= 0) return;
+    const date = o.orderDate || o.createdAt;
+    if (!date) return;
+    const month = `T${new Date(date).getMonth() + 1}`;
+    revenueByMonth[month] = (revenueByMonth[month] || 0) + rev;
+  });
   const chartData = Object.entries(revenueByMonth)
     .sort((a, b) => parseInt(a[0].slice(1)) - parseInt(b[0].slice(1)))
     .map(([name, rev]) => ({ name, rev: Math.round(rev) }));
 
-  // --- Tồn kho theo category ---
+  // Tồn kho theo category
   const stockByCategory: Record<string, { total: number; inStock: number }> = {};
   products.forEach(p => {
     const cat = p.categoryName || 'Khác';
@@ -57,33 +90,15 @@ const Dashboard: React.FC = () => {
     if (stock > 0) stockByCategory[cat].inStock += 1;
   });
   const stockItems = Object.entries(stockByCategory)
-    .map(([name, { total, inStock }]) => ({
-      name,
-      pct: total > 0 ? Math.round((inStock / total) * 100) : 0,
-    }))
+    .map(([name, { total, inStock }]) => ({ name, pct: total > 0 ? Math.round((inStock / total) * 100) : 0 }))
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 5);
 
   const barColors = ['blue', 'indigo', 'orange', 'red', 'green'];
 
-  // --- Recent orders ---
   const recentOrders = [...orders]
-    .sort((a, b) => {
-      const da = new Date(a.orderDate || a.createdAt || 0).getTime();
-      const db = new Date(b.orderDate || b.createdAt || 0).getTime();
-      return db - da;
-    })
+    .sort((a, b) => new Date(b.orderDate || b.createdAt || 0).getTime() - new Date(a.orderDate || a.createdAt || 0).getTime())
     .slice(0, 5);
-
-  const statusLabel: Record<string, { label: string; color: string }> = {
-    PENDING:   { label: 'Chờ xác nhận', color: 'bg-yellow-100 text-yellow-700' },
-    CONFIRMED: { label: 'Đã xác nhận',  color: 'bg-blue-100 text-blue-700' },
-    DELIVERED: { label: 'Đang giao',    color: 'bg-purple-100 text-purple-700' },
-    COMPLETED: { label: 'Hoàn thành',   color: 'bg-green-100 text-green-700' },
-    CANCELLED: { label: 'Đã hủy',       color: 'bg-red-100 text-red-700' },
-    PAID:      { label: 'Đã thanh toán',color: 'bg-emerald-100 text-emerald-700' },
-    FAILED:    { label: 'Thất bại',     color: 'bg-gray-100 text-gray-500' },
-  };
 
   return (
     <AdminLayout
@@ -101,18 +116,20 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             {[
               {
-                label: 'Doanh Thu',
-                val: '$' + totalRevenue.toLocaleString(),
+                label: 'Doanh Thu Thực Thu',
+                val: `$${totalRevenue.toLocaleString()}`,
                 icon: 'payments',
                 color: 'blue',
-                sub: `${orders.filter(o => ['COMPLETED','PAID','DELIVERED'].includes(o.status)).length} đơn hoàn thành`,
+                sub: pendingRevenue > 0 ? `+$${pendingRevenue.toLocaleString()} chờ thu góp` : 'Đã thu đầy đủ',
+                subColor: pendingRevenue > 0 ? 'text-amber-500' : 'text-gray-400',
               },
               {
                 label: 'Đơn Hàng',
                 val: orders.length.toString(),
                 icon: 'shopping_cart',
                 color: 'indigo',
-                sub: `${orders.filter(o => o.status === 'CANCELLED').length} đã hủy`,
+                sub: `${installmentOrders} đơn trả góp`,
+                subColor: 'text-gray-400',
               },
               {
                 label: 'Khách Hàng',
@@ -120,6 +137,7 @@ const Dashboard: React.FC = () => {
                 icon: 'group',
                 color: 'orange',
                 sub: `${users.filter(u => (u.roleName || u.role)?.toUpperCase() === 'MEMBER').length} thành viên`,
+                subColor: 'text-gray-400',
               },
               {
                 label: 'Chờ Xử Lý',
@@ -127,6 +145,7 @@ const Dashboard: React.FC = () => {
                 icon: 'pending_actions',
                 color: 'red',
                 sub: pendingOrders > 0 ? 'Cần chú ý' : 'Không có',
+                subColor: pendingOrders > 0 ? 'text-red-500' : 'text-gray-400',
               },
             ].map((stat, idx) => (
               <div key={idx} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
@@ -135,7 +154,7 @@ const Dashboard: React.FC = () => {
                   <span className={`material-symbols-outlined text-${stat.color}-500`}>{stat.icon}</span>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">{stat.val}</h3>
-                <p className={`text-xs mt-2 ${stat.color === 'red' && pendingOrders > 0 ? 'text-red-500' : 'text-gray-400'}`}>{stat.sub}</p>
+                <p className={`text-xs mt-2 ${stat.subColor}`}>{stat.sub}</p>
               </div>
             ))}
           </div>
@@ -143,7 +162,10 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Chart */}
             <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-100">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-gray-700 mb-6">Doanh Thu Theo Tháng</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-700">Doanh Thu Thực Thu Theo Tháng</h2>
+                <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-lg">Chỉ tính tiền đã nhận</span>
+              </div>
               {chartData.length > 0 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -152,7 +174,7 @@ const Dashboard: React.FC = () => {
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} tickFormatter={(v) => `$${v.toLocaleString()}`} />
                       <Tooltip
-                        formatter={(v: number) => [`$${v.toLocaleString()}`, 'Doanh thu']}
+                        formatter={(v: number) => [`$${v.toLocaleString()}`, 'Doanh thu thực thu']}
                         contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                       />
                       <Line type="monotone" dataKey="rev" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: '#2563eb' }} />
@@ -160,9 +182,7 @@ const Dashboard: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="h-64 flex items-center justify-center text-gray-400 text-sm">
-                  Chưa có dữ liệu doanh thu
-                </div>
+                <div className="h-64 flex items-center justify-center text-gray-400 text-sm">Chưa có dữ liệu doanh thu</div>
               )}
             </div>
 
@@ -204,7 +224,7 @@ const Dashboard: React.FC = () => {
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Mã đơn</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Khách hàng</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Ngày đặt</th>
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tổng tiền</th>
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Giá trị / Đã thu</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Trạng thái</th>
                   </tr>
                 </thead>
@@ -212,6 +232,8 @@ const Dashboard: React.FC = () => {
                   {recentOrders.length > 0 ? recentOrders.map(order => {
                     const st = statusLabel[order.status] ?? { label: order.status, color: 'bg-gray-100 text-gray-500' };
                     const date = order.orderDate || order.createdAt;
+                    const isInstallment = order.paymentType === 'INSTALLMENT';
+                    const actualRev = getActualRevenue(order);
                     return (
                       <tr key={order.orderId} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 text-sm font-bold text-gray-900">#{order.orderId}</td>
@@ -219,8 +241,15 @@ const Dashboard: React.FC = () => {
                         <td className="px-6 py-4 text-xs text-gray-500">
                           {date ? new Date(date).toLocaleDateString('vi-VN') : '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                          ${order.totalAmount.toLocaleString()}
+                        <td className="px-6 py-4">
+                          {isInstallment ? (
+                            <div>
+                              <p className="text-sm font-bold text-emerald-600">${actualRev.toLocaleString()} thu</p>
+                              <p className="text-xs text-gray-400">/ ${order.totalAmount.toLocaleString()} tổng</p>
+                            </div>
+                          ) : (
+                            <p className="text-sm font-bold text-gray-900">${order.totalAmount.toLocaleString()}</p>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${st.color}`}>

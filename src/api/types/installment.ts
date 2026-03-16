@@ -6,12 +6,8 @@ export interface InstallmentPackageResponse {
   durationMonths: number;
   interestRate: number;
   minOrderAmount: number;
-  maxOrderAmount?: number;
-  downPaymentPercent?: number; // % trả trước (0 nếu không có)
-  description?: string;
-  active: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  downPaymentPercentage: number;
+  active: boolean; // Java serializes boolean isActive -> "active"
 }
 
 export interface InstallmentPackageRequest {
@@ -19,8 +15,6 @@ export interface InstallmentPackageRequest {
   durationMonths: number;
   interestRate: number;
   minOrderAmount: number;
-  maxOrderAmount?: number;
-  downPaymentPercent?: number;
-  description?: string;
+  downPaymentPercentage: number;
   isActive?: boolean;
 }
